@@ -4,21 +4,20 @@
     <meta charset="UTF-8">
     <meta name="referrer" content="no-referrer">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spider PLAYER PRO - FINAL FIX</title>
-    
+    <title>Spider Player Pro - Quality Fix</title>
     <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
     <style>
         :root { --plyr-color-main: #ff0000; }
         body { margin: 0; background: #000; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-        .container { width: 100%; max-width: 850px; padding: 10px; }
-        .player-wrapper { border-radius: 15px; overflow: hidden; background: #111; border: 1px solid #333; }
+        .container { width: 100%; max-width: 900px; }
+        .player-wrapper { border-radius: 12px; overflow: hidden; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="player-wrapper">
-        <video id="videoPlayer" playsinline controls></video>
+        <video id="player" playsinline controls></video>
     </div>
 </div>
 
@@ -26,38 +25,60 @@
 <script src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
 
 <script>
-    const video = document.getElementById('videoPlayer');
-    const params = new URLSearchParams(window.location.search);
-    let v = params.get('v');
+    const video = document.getElementById('player');
+    const v = new URLSearchParams(window.location.search).get('v');
 
     if (v) {
-        try {
-            // Agar link Base64 hai toh decode karega, warna direct lega
-            let finalUrl = v.includes('http') ? v : atob(v);
+        let url = v.includes('http') ? v : atob(v);
 
-            if (Hls.isSupported()) {
-                const hls = new Hls({
-                    // Stability settings for live class
-                    liveSyncDuration: 30,
-                    manifestLoadingMaxRetry: 20,
-                    // Referrer policy ko bypass karne ke liye headers (optional)
-                    xhrSetup: function(xhr, url) {
-                        xhr.withCredentials = false;
+        if (Hls.isSupported()) {
+            const hls = new Hls({
+                liveSyncDuration: 30,
+                capLevelToPlayerSize: true // Performance ke liye
+            });
+
+            hls.loadSource(url);
+            hls.attachMedia(video);
+
+            hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                // Saari available qualities nikaalna
+                const availableQualities = hls.levels.map((l) => l.height);
+                availableQualities.unshift(0); // 'Auto' option ke liye
+
+                const player = new Plyr(video, {
+                    settings: ['quality', 'speed'],
+                    quality: {
+                        default: 0,
+                        options: availableQualities,
+                        forced: true,
+                        onChange: (e) => updateQuality(e),
+                    },
+                    speed: { selected: 1, options: [0.5, 0.75, 1, 1.25, 1.5, 2] }
+                });
+
+                function updateQuality(newQuality) {
+                    if (newQuality === 0) {
+                        hls.currentLevel = -1; // Auto quality
+                        console.log("Quality set to Auto");
+                    } else {
+                        hls.levels.forEach((level, levelIndex) => {
+                            if (level.height === newQuality) {
+                                hls.currentLevel = levelIndex;
+                                console.log("Quality set to: " + newQuality);
+                            }
+                        });
                     }
-                });
-                
-                hls.loadSource(finalUrl);
-                hls.attachMedia(video);
-                
-                hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                    new Plyr(video, {
-                        settings: ['quality', 'speed'],
-                        quality: { default: 0, options: [0], forced: true }
-                    });
-                    video.play().catch(() => {});
-                });
-            }
-        } catch (e) { console.error("Error loading stream"); }
+                }
+            });
+
+            // Error recovery logic
+            hls.on(Hls.Events.ERROR, (event, data) => {
+                if (data.fatal) {
+                    if (data.type === Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad();
+                    else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
+                }
+            });
+        }
     }
 </script>
 </body>
