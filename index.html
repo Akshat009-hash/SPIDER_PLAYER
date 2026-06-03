@@ -115,7 +115,7 @@
             height: 100%;
         }
 
-        /* Telegram Button */
+        /* Telegram Button Only */
         .tg-button {
             display: flex;
             align-items: center;
@@ -343,6 +343,7 @@
     if (v) {
         let url;
         try {
+            // Yeh user ko exact source hide karne me madad karega aur bots direct link decode kar payenge
             url = v.includes('http') ? v : atob(v);
         } catch (e) {
             errorMsg.style.display = 'block';
@@ -353,15 +354,14 @@
             const isHLS = url.includes('.m3u8') || url.includes('webcm') || url.includes('m3u');
 
             if (isHLS && Hls.isSupported()) {
-                // Yahan par humne 30 seconds ke buffer aur live optimization settings add kar di hain
                 const hls = new Hls({
                     capLevelToPlayerSize: true,
                     autoStartLoad: true,
                     enableWorker: true,
-                    liveSyncDurationCount: 10,  // Standard TS chunk size (~3s) ke hisab se 10 chunks peeche chalega (~30 seconds)
-                    maxBufferLength: 30,         // 30 seconds tak ka video buffer hamesha ready rakhega
-                    maxMaxBufferLength: 45,      // Max buffer ceiling
-                    lowLatencyMode: false        // Low-latency off kiya taaki stream bar-bar breakdown na kare
+                    liveSyncDurationCount: 10,  // Stabilized 30 seconds buffer
+                    maxBufferLength: 30,
+                    maxMaxBufferLength: 45,
+                    lowLatencyMode: false
                 });
 
                 window.hls = hls;
