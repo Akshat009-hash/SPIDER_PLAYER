@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Spider Player Pro - Premium Video Experience</title>
     
-    <!-- External Libraries -->
     <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
     
@@ -262,17 +261,14 @@
     </a>
 </div>
 
-<!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 <script src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
 
 <script>
     // Smart View Counter Logic
-    // This uses a reliable public counter that doesn't require an account
     async function updateCounter() {
         const countElement = document.getElementById('count');
         try {
-            // Create a unique key based on the URL to track views for this specific page
             const uniqueKey = btoa(window.location.pathname).replace(/=/g, "").substring(0, 15);
             const response = await fetch(`https://api.countapi.xyz/hit/spider_pro_v5/${uniqueKey}`);
             const data = await response.json();
@@ -283,7 +279,6 @@
                 throw new Error("Invalid data");
             }
         } catch (e) {
-            // Fallback: If API is down, show a realistic number based on session
             let localCount = localStorage.getItem('spider_views') || Math.floor(Math.random() * 500) + 1200;
             localCount = parseInt(localCount) + 1;
             localStorage.setItem('spider_views', localCount);
@@ -295,7 +290,7 @@
     window.onload = () => {
         setTimeout(() => {
             document.getElementById('tgPopup').classList.add('active');
-        }, 5000); // Show popup after 5 seconds
+        }, 5000);
     };
 
     function closePopup() {
@@ -358,10 +353,15 @@
             const isHLS = url.includes('.m3u8') || url.includes('webcm') || url.includes('m3u');
 
             if (isHLS && Hls.isSupported()) {
+                // Yahan par humne 30 seconds ke buffer aur live optimization settings add kar di hain
                 const hls = new Hls({
                     capLevelToPlayerSize: true,
                     autoStartLoad: true,
-                    enableWorker: true
+                    enableWorker: true,
+                    liveSyncDurationCount: 10,  // Standard TS chunk size (~3s) ke hisab se 10 chunks peeche chalega (~30 seconds)
+                    maxBufferLength: 30,         // 30 seconds tak ka video buffer hamesha ready rakhega
+                    maxMaxBufferLength: 45,      // Max buffer ceiling
+                    lowLatencyMode: false        // Low-latency off kiya taaki stream bar-bar breakdown na kare
                 });
 
                 window.hls = hls;
